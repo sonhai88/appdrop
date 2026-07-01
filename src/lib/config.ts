@@ -21,6 +21,13 @@ export const MAX_UPLOAD_BYTES = Number(
 export const DEFAULT_EXPIRY_DAYS = Number(process.env.DEFAULT_EXPIRY_DAYS ?? 30);
 
 /**
+ * Max number of distinct apps (by platform + bundle id) kept at once. Uploading
+ * a build that creates a 21st app evicts the least-recently-updated app (all its
+ * versions) — FIFO. Multiple versions of the same app count as one.
+ */
+export const MAX_APPS = Number(process.env.MAX_APPS ?? 20);
+
+/**
  * Absolute public base URL (https://apps.example.com), no trailing slash.
  * REQUIRED for iOS OTA: the manifest.plist and .ipa URLs inside it must be
  * absolute HTTPS. If unset we fall back to the incoming request's headers

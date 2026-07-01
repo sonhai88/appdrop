@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listApps } from "@/lib/db";
 import { authEnabled } from "@/lib/auth";
+import { MAX_APPS } from "@/lib/config";
 import { formatDate } from "@/lib/format";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -14,7 +15,8 @@ export default async function BuildsDashboard({
 }) {
   const { q } = await searchParams;
   const query = (q ?? "").trim().toLowerCase();
-  const apps = listApps().filter(
+  const allApps = listApps();
+  const apps = allApps.filter(
     (a) =>
       !query ||
       a.app_name.toLowerCase().includes(query) ||
@@ -30,7 +32,9 @@ export default async function BuildsDashboard({
           </span>
           <div className="flex flex-col">
             <span className="text-base font-bold leading-tight">AppDrop</span>
-            <span className="text-xs text-muted">Quản lý builds</span>
+            <span className="text-xs text-muted">
+              {allApps.length}/{MAX_APPS} app
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">

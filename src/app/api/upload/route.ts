@@ -7,6 +7,7 @@ import { insertBuild, type BuildRow } from "@/lib/db";
 import { parseBuild, platformFromFilename } from "@/lib/parse";
 import { newSlug } from "@/lib/slug";
 import { hashPassword } from "@/lib/password";
+import { enforceAppLimit } from "@/lib/limits";
 import { buildManifestPlist } from "@/lib/manifest";
 import {
   r2Enabled,
@@ -129,6 +130,10 @@ export async function POST(req: Request) {
       password_hash: hashPassword(searchParams.get("password")),
     };
     insertBuild(row);
+
+    // FIFO cap: if this created a 21st distinct app, evict the oldest app.
+    const evicted = await enforceAppLimit();
+    if (evicted > 0) console.log(`[limit] evicted ${evicted} build(s) over app cap`);
 
     return NextResponse.json({ slug, platform, appName: parsed.appName });
   } catch (err) {
