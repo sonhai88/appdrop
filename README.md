@@ -35,7 +35,8 @@ see [DEPLOY.md](./DEPLOY.md).
 
 ## Deploy
 
-Full VPS guide (domain → Caddy → systemd → iOS signing notes): **[DEPLOY.md](./DEPLOY.md)**.
+- **Quick setup for whoever sets up the VPS (LAN, copy-paste commands): [SETUP.md](./SETUP.md)**
+- Full guide (domain vs LAN, Caddy, systemd, storage, iOS signing): [DEPLOY.md](./DEPLOY.md)
 
 ## Project layout
 
