@@ -1,3 +1,4 @@
+import { createReadStream } from "node:fs";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE, authEnabled, sessionToken } from "@/lib/auth";
@@ -6,6 +7,16 @@ import { insertBuild, type BuildRow } from "@/lib/db";
 import { parseBuild, platformFromFilename } from "@/lib/parse";
 import { newSlug } from "@/lib/slug";
 import { hashPassword } from "@/lib/password";
+import { buildManifestPlist } from "@/lib/manifest";
+import {
+  r2Enabled,
+  r2PutStream,
+  r2PutBuffer,
+  r2PublicUrl,
+  buildKey,
+  iconKey,
+  manifestKey,
+} from "@/lib/r2";
 import {
   buildFilePath,
   removeBuildDir,
@@ -64,6 +75,39 @@ export async function POST(req: Request) {
     if (parsed.iconBuffer) {
       saveIcon(slug, parsed.iconBuffer, "icon.png");
       iconName = "icon.png";
+    }
+
+    // If R2 is configured, ship the artifacts up (build + icon + iOS manifest)
+    // and drop the local staging copy — R2 becomes the store of record.
+    if (r2Enabled()) {
+      const contentType =
+        platform === "ios"
+          ? "application/octet-stream"
+          : "application/vnd.android.package-archive";
+      await r2PutStream(
+        buildKey(slug, storedName),
+        createReadStream(destPath),
+        contentType,
+      );
+      if (parsed.iconBuffer) {
+        await r2PutBuffer(iconKey(slug), parsed.iconBuffer, "image/png");
+      }
+      if (platform === "ios") {
+        const plist = buildManifestPlist({
+          ipaUrl: r2PublicUrl(buildKey(slug, storedName)),
+          iconUrl: r2PublicUrl(iconKey(slug)),
+          bundleId: parsed.bundleId,
+          version: parsed.version,
+          title: parsed.appName,
+          hasIcon: Boolean(parsed.iconBuffer),
+        });
+        await r2PutBuffer(
+          manifestKey(slug),
+          Buffer.from(plist, "utf8"),
+          "application/xml",
+        );
+      }
+      removeBuildDir(slug);
     }
 
     const row: BuildRow = {

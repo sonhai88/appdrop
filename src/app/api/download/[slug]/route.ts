@@ -1,5 +1,7 @@
 import { Readable } from "node:stream";
+import { NextResponse } from "next/server";
 import { getActiveBuild, incrementDownloadCount } from "@/lib/db";
+import { r2Enabled, r2PublicUrl, buildKey } from "@/lib/r2";
 import { fileExists, openReadStream } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -11,7 +13,20 @@ export async function GET(
 ) {
   const { slug } = await params;
   const build = getActiveBuild(slug);
-  if (!build || !fileExists(slug, build.file_name)) {
+  if (!build) {
+    return new Response("Build not found or expired.", { status: 404 });
+  }
+
+  // R2 mode: count the hit, then hand off to R2's public URL (egress-free,
+  // no bytes through this server).
+  if (r2Enabled()) {
+    incrementDownloadCount(slug);
+    return NextResponse.redirect(r2PublicUrl(buildKey(slug, build.file_name)), {
+      status: 302,
+    });
+  }
+
+  if (!fileExists(slug, build.file_name)) {
     return new Response("Build not found or expired.", { status: 404 });
   }
 

@@ -1,6 +1,8 @@
+import { NextResponse } from "next/server";
 import { getBaseUrl } from "@/lib/config";
 import { getActiveBuild } from "@/lib/db";
 import { buildManifestPlist } from "@/lib/manifest";
+import { r2Enabled, r2PublicUrl, manifestKey } from "@/lib/r2";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,9 +17,15 @@ export async function GET(
     return new Response("Manifest not found.", { status: 404 });
   }
 
+  // R2 mode: the manifest lives as a public object (uploaded at build time).
+  if (r2Enabled()) {
+    return NextResponse.redirect(r2PublicUrl(manifestKey(slug)), { status: 302 });
+  }
+
+  const baseUrl = getBaseUrl(req);
   const plist = buildManifestPlist({
-    baseUrl: getBaseUrl(req),
-    slug,
+    ipaUrl: `${baseUrl}/api/download/${slug}`,
+    iconUrl: `${baseUrl}/api/icon/${slug}`,
     bundleId: build.bundle_id,
     version: build.version,
     title: build.app_name,

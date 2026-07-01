@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteBuild, getBuild } from "@/lib/db";
-import { removeBuildDir } from "@/lib/storage";
+import { deleteBuildBlobs } from "@/lib/blob";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function DELETE(
   const build = getBuild(slug);
   if (!build) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  removeBuildDir(slug);
+  await deleteBuildBlobs(build);
   deleteBuild(slug);
   return NextResponse.json({ ok: true });
 }

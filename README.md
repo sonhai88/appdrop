@@ -41,6 +41,13 @@ see [DEPLOY.md](./DEPLOY.md).
 
 - **Quick setup for whoever sets up the VPS (LAN, copy-paste commands): [SETUP.md](./SETUP.md)**
 - Full guide (domain vs LAN, Caddy, systemd, storage, iOS signing): [DEPLOY.md](./DEPLOY.md)
+- **Cloudflare R2 storage (egress-free; also makes iOS OTA work without a domain): [R2.md](./R2.md)**
+
+## Storage
+
+Builds are stored on local disk (`DATA_DIR`) by default. Set the five `R2_*` vars
+(see [R2.md](./R2.md)) to switch to Cloudflare R2 — no code change, and iOS OTA then
+works over R2's HTTPS with no domain/cert on the server.
 
 ## Project layout
 

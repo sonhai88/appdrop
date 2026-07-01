@@ -9,15 +9,15 @@ export async function register() {
 
   const { sweepExpired } = await import("./lib/cleanup");
 
-  const run = () => {
+  const run = async () => {
     try {
-      const removed = sweepExpired();
+      const removed = await sweepExpired();
       if (removed > 0) console.log(`[cleanup] removed ${removed} expired build(s)`);
     } catch (err) {
       console.error("[cleanup] sweep failed", err);
     }
   };
 
-  run();
-  setInterval(run, 60 * 60 * 1000).unref();
+  void run();
+  setInterval(() => void run(), 60 * 60 * 1000).unref();
 }

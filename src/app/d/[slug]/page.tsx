@@ -3,6 +3,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import { baseUrlFromHeaders } from "@/lib/config";
 import { getActiveBuild } from "@/lib/db";
+import { manifestUrlFor } from "@/lib/blob";
 import { unlockToken } from "@/lib/password";
 import InstallPanel from "@/components/InstallPanel";
 import UnlockForm from "@/components/UnlockForm";
@@ -60,7 +61,7 @@ export default async function SharePage({
   }
 
   const shareUrl = `${baseUrl}/d/${slug}`;
-  const manifestUrl = `${baseUrl}/api/manifest/${slug}`;
+  const manifestUrl = manifestUrlFor(slug, baseUrl);
   const itmsUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(
     manifestUrl,
   )}`;

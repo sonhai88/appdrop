@@ -8,9 +8,10 @@ function escapeXml(value: string): string {
 }
 
 interface ManifestInput {
-  /** Absolute https base, no trailing slash. */
-  baseUrl: string;
-  slug: string;
+  /** Absolute HTTPS URL to the .ipa (server route or R2 public URL). */
+  ipaUrl: string;
+  /** Absolute HTTPS URL to the icon PNG. */
+  iconUrl: string;
   bundleId: string;
   version: string;
   title: string;
@@ -24,16 +25,13 @@ interface ManifestInput {
  * silently refuses to install.
  */
 export function buildManifestPlist({
-  baseUrl,
-  slug,
+  ipaUrl,
+  iconUrl,
   bundleId,
   version,
   title,
   hasIcon,
 }: ManifestInput): string {
-  const ipaUrl = `${baseUrl}/api/download/${slug}`;
-  const iconUrl = `${baseUrl}/api/icon/${slug}`;
-
   const iconAssets = hasIcon
     ? `
         <dict>

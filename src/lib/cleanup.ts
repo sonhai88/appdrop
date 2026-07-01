@@ -1,24 +1,30 @@
-import fs from "node:fs";
 import { getDb } from "./db";
-import { buildDir } from "./storage";
+import { deleteBuildBlobs } from "./blob";
 
 /**
- * Delete builds whose link has expired: remove both the DB row and the
- * on-disk folder (the .ipa/.apk + icon). Keeps the data dir from filling up.
- * Returns how many builds were removed.
+ * Delete builds whose link has expired: remove the stored artifacts (R2 objects
+ * and/or local files) and the DB row. Returns how many builds were removed.
  */
-export function sweepExpired(): number {
+export async function sweepExpired(): Promise<number> {
   const now = Date.now();
   const db = getDb();
   const rows = db
-    .prepare("SELECT slug FROM builds WHERE expires_at IS NOT NULL AND expires_at < ?")
-    .all(now) as Array<{ slug: string }>;
+    .prepare(
+      `SELECT slug, file_name, icon_name, platform
+       FROM builds WHERE expires_at IS NOT NULL AND expires_at < ?`,
+    )
+    .all(now) as Array<{
+    slug: string;
+    file_name: string;
+    icon_name: string | null;
+    platform: "ios" | "android";
+  }>;
 
   const del = db.prepare("DELETE FROM builds WHERE slug = ?");
   let removed = 0;
-  for (const { slug } of rows) {
-    fs.rmSync(buildDir(slug), { recursive: true, force: true });
-    del.run(slug);
+  for (const b of rows) {
+    await deleteBuildBlobs(b);
+    del.run(b.slug);
     removed++;
   }
   return removed;
