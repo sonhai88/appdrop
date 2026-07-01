@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AppDrop
 
-## Getting Started
+Self-hosted [Diawi](https://www.diawi.com/) clone — upload an `.ipa` / `.apk`, get a
+shareable link, install over-the-air on iOS & Android.
 
-First, run the development server:
+## What it does
+
+- **Upload** a build (drag-drop, streamed to disk — handles 200MB+ files).
+- **Auto-parses** app name, bundle id, version, icon from the `.ipa`/`.apk` (no Xcode/aapt needed).
+- **Share page** `/d/<slug>` with QR code + OS-aware install button.
+- **iOS**: generates the `itms-services://` manifest.plist for OTA install.
+- **Android**: serves the `.apk` directly with the right content-type.
+- Optional note + link expiry; download counter.
+
+## Stack
+
+| Concern | Choice |
+|---|---|
+| App | Next.js 16 (App Router) + React 19 + TS |
+| Styling | Tailwind v4 |
+| DB | SQLite (`better-sqlite3`) — single file, zero config |
+| Storage | local disk (`DATA_DIR`) |
+| Parsing | `app-info-parser` |
+| HTTPS/proxy | Caddy (auto Let's Encrypt) |
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+npm run dev    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Android installs work over LAN immediately. **iOS OTA needs a real HTTPS domain** —
+see [DEPLOY.md](./DEPLOY.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Full VPS guide (domain → Caddy → systemd → iOS signing notes): **[DEPLOY.md](./DEPLOY.md)**.
 
-## Learn More
+## Project layout
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── page.tsx                     # landing + upload
+│   ├── d/[slug]/page.tsx            # share / install page (QR + buttons)
+│   └── api/
+│       ├── upload/route.ts          # POST: stream file to disk + parse
+│       ├── download/[slug]/route.ts # GET: serve .ipa/.apk
+│       ├── icon/[slug]/route.ts     # GET: app icon png
+│       └── manifest/[slug]/route.ts # GET: iOS manifest.plist
+├── components/
+│   ├── UploadForm.tsx               # drag-drop + XHR progress
+│   └── InstallPanel.tsx             # OS detection + install action
+└── lib/
+    ├── config.ts  db.ts  storage.ts  parse.ts  manifest.ts  slug.ts  format.ts
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> **iOS limitation:** this only hosts + builds the manifest. The `.ipa` must already be
+> signed (ad-hoc with the device UDID in the profile, or enterprise). Apple's rule, same
+> as Diawi.

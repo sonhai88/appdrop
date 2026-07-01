@@ -1,0 +1,25 @@
+# systemd unit for the AppDrop Next.js server.
+# Install:
+#   sudo cp deploy/appdrop.service /etc/systemd/system/appdrop.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now appdrop
+# Logs:  journalctl -u appdrop -f
+
+[Unit]
+Description=AppDrop — iOS/Android build distribution
+After=network.target
+
+[Service]
+Type=simple
+# Adjust to where you cloned the repo and which user runs it.
+WorkingDirectory=/opt/appdrop
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=3
+# Reads PUBLIC_BASE_URL, DATA_DIR, etc. from the project's .env via next.
+EnvironmentFile=/opt/appdrop/.env
+User=appdrop
+Group=appdrop
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+# Caddy reverse proxy for AppDrop.
+# Caddy fetches + renews a Let's Encrypt cert automatically — this gives iOS the
+# valid HTTPS it requires for OTA install. Just point your domain's A record at
+# this VPS and run Caddy.
+#
+# Replace apps.example.com with your real (sub)domain.
+
+apps.example.com {
+	# Stream uploads/downloads straight through; no size cap (builds are large).
+	reverse_proxy localhost:3000
+
+	# Allow big request bodies (the app enforces its own MAX_UPLOAD_BYTES).
+	request_body {
+		max_size 0
+	}
+
+	encode gzip
+}
