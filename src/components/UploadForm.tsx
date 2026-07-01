@@ -20,6 +20,7 @@ export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [comment, setComment] = useState("");
   const [expiry, setExpiry] = useState("30");
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export default function UploadForm() {
       filename: file.name,
       comment,
       expiry,
+      password,
     });
 
     const xhr = new XMLHttpRequest();
@@ -151,6 +153,20 @@ export default function UploadForm() {
               <option value="90">90 ngày</option>
               <option value="0">Không hết hạn</option>
             </select>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-foreground">
+              Mật khẩu link (tuỳ chọn)
+            </span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Để trống = ai có link đều mở được"
+              disabled={uploading}
+              className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/30"
+            />
           </label>
         </div>
       )}

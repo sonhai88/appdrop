@@ -36,6 +36,8 @@ export interface BuildRow {
   /** Unix ms when the link expires. null = never. */
   expires_at: number | null;
   download_count: number;
+  /** SHA-256 hex of the per-link password, or null if the link is public. */
+  password_hash: string | null;
 }
 
 function init(): Database.Database {
@@ -58,10 +60,42 @@ function init(): Database.Database {
       comment           TEXT NOT NULL DEFAULT '',
       created_at        INTEGER NOT NULL,
       expires_at        INTEGER,
-      download_count    INTEGER NOT NULL DEFAULT 0
+      download_count    INTEGER NOT NULL DEFAULT 0,
+      password_hash     TEXT
     );
   `);
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS udids (
+      udid        TEXT PRIMARY KEY,
+      product     TEXT NOT NULL DEFAULT '',
+      version     TEXT NOT NULL DEFAULT '',
+      serial      TEXT NOT NULL DEFAULT '',
+      device_name TEXT NOT NULL DEFAULT '',
+      created_at  INTEGER NOT NULL
+    );
+  `);
+  migrate(database);
   return database;
+}
+
+/**
+ * Add columns introduced after the first release to older DB files.
+ * SQLite has no "ADD COLUMN IF NOT EXISTS", so we diff against table_info.
+ */
+function migrate(database: Database.Database): void {
+  const cols = new Set(
+    (database.prepare("PRAGMA table_info(builds)").all() as Array<{ name: string }>).map(
+      (c) => c.name,
+    ),
+  );
+  const addColumns: Record<string, string> = {
+    password_hash: "TEXT",
+  };
+  for (const [name, type] of Object.entries(addColumns)) {
+    if (!cols.has(name)) {
+      database.exec(`ALTER TABLE builds ADD COLUMN ${name} ${type}`);
+    }
+  }
 }
 
 export function getDb(): Database.Database {
@@ -75,11 +109,11 @@ export function insertBuild(row: BuildRow): void {
       `INSERT INTO builds
         (slug, platform, app_name, bundle_id, version, build_number,
          original_filename, file_name, icon_name, min_os, size_bytes,
-         comment, created_at, expires_at, download_count)
+         comment, created_at, expires_at, download_count, password_hash)
        VALUES
         (@slug, @platform, @app_name, @bundle_id, @version, @build_number,
          @original_filename, @file_name, @icon_name, @min_os, @size_bytes,
-         @comment, @created_at, @expires_at, @download_count)`,
+         @comment, @created_at, @expires_at, @download_count, @password_hash)`,
     )
     .run(row);
 }
@@ -102,4 +136,110 @@ export function incrementDownloadCount(slug: string): void {
   getDb()
     .prepare("UPDATE builds SET download_count = download_count + 1 WHERE slug = ?")
     .run(slug);
+}
+
+export function deleteBuild(slug: string): void {
+  getDb().prepare("DELETE FROM builds WHERE slug = ?").run(slug);
+}
+
+/** All builds, newest first, optionally filtered by name/bundle id. */
+export function listBuilds(search?: string): BuildRow[] {
+  const db = getDb();
+  if (search && search.trim()) {
+    const like = `%${search.trim()}%`;
+    return db
+      .prepare(
+        `SELECT * FROM builds
+         WHERE app_name LIKE ? OR bundle_id LIKE ?
+         ORDER BY created_at DESC`,
+      )
+      .all(like, like) as BuildRow[];
+  }
+  return db.prepare("SELECT * FROM builds ORDER BY created_at DESC").all() as BuildRow[];
+}
+
+export interface AppGroup {
+  bundle_id: string;
+  platform: Platform;
+  app_name: string;
+  latest_version: string;
+  latest_build_number: string;
+  latest_slug: string;
+  icon_slug: string | null; // slug of the latest build that has an icon
+  build_count: number;
+  last_updated: number;
+}
+
+/**
+ * Group builds by (bundle_id, platform) so the same app across versions shows
+ * as one entry with its newest build surfaced.
+ */
+export function listApps(): AppGroup[] {
+  const rows = getDb()
+    .prepare("SELECT * FROM builds ORDER BY created_at DESC")
+    .all() as BuildRow[];
+
+  const groups = new Map<string, AppGroup>();
+  for (const b of rows) {
+    const key = `${b.platform}:${b.bundle_id}`;
+    const existing = groups.get(key);
+    if (!existing) {
+      // rows are newest-first, so the first one we see is the latest.
+      groups.set(key, {
+        bundle_id: b.bundle_id,
+        platform: b.platform,
+        app_name: b.app_name,
+        latest_version: b.version,
+        latest_build_number: b.build_number,
+        latest_slug: b.slug,
+        icon_slug: b.icon_name ? b.slug : null,
+        build_count: 1,
+        last_updated: b.created_at,
+      });
+    } else {
+      existing.build_count += 1;
+      if (!existing.icon_slug && b.icon_name) existing.icon_slug = b.slug;
+    }
+  }
+  return Array.from(groups.values());
+}
+
+/** All builds for one app (bundle_id + platform), newest first. */
+export function listBuildsForApp(platform: Platform, bundleId: string): BuildRow[] {
+  return getDb()
+    .prepare(
+      "SELECT * FROM builds WHERE platform = ? AND bundle_id = ? ORDER BY created_at DESC",
+    )
+    .all(platform, bundleId) as BuildRow[];
+}
+
+export interface UdidRow {
+  udid: string;
+  product: string;
+  version: string;
+  serial: string;
+  device_name: string;
+  created_at: number;
+}
+
+/** Upsert a collected UDID (re-enrolling the same device just refreshes it). */
+export function upsertUdid(row: UdidRow): void {
+  getDb()
+    .prepare(
+      `INSERT INTO udids (udid, product, version, serial, device_name, created_at)
+       VALUES (@udid, @product, @version, @serial, @device_name, @created_at)
+       ON CONFLICT(udid) DO UPDATE SET
+         product = excluded.product,
+         version = excluded.version,
+         serial = excluded.serial,
+         device_name = excluded.device_name,
+         created_at = excluded.created_at`,
+    )
+    .run(row);
+}
+
+export function listUdids(): UdidRow[] {
+  return getDb()
+    .prepare("SELECT * FROM udids ORDER BY created_at DESC")
+    .all() as UdidRow[];
 }

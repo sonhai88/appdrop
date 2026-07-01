@@ -40,7 +40,11 @@ sudo -u appdrop nano .env      # xem mục 3
 PUBLIC_BASE_URL=https://192.168.1.50
 DATA_DIR=/var/lib/appdrop/data
 PORT=3000
+APP_PASSWORD=đặt-mật-khẩu-chung   # để trống = ai trong LAN cũng upload được
 ```
+
+> Trang cài đặt (`/d/...`, `/udid`) luôn public để tester dùng; `APP_PASSWORD` chỉ
+> khoá trang upload + dashboard `/builds`. Tester lấy UDID tại `/udid`, admin xem ở `/builds/udids`.
 
 Chạy bằng systemd:
 ```bash

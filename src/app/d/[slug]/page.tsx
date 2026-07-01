@@ -1,9 +1,11 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { baseUrlFromHeaders } from "@/lib/config";
 import { getActiveBuild } from "@/lib/db";
+import { unlockToken } from "@/lib/password";
 import InstallPanel from "@/components/InstallPanel";
+import UnlockForm from "@/components/UnlockForm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +35,28 @@ export default async function SharePage({
         </Link>
       </main>
     );
+  }
+
+  // Password gate: if the link has a password, require the unlock cookie before
+  // revealing the install links.
+  if (build.password_hash) {
+    const cookie = (await cookies()).get(`unlock_${slug}`)?.value;
+    if (cookie !== unlockToken(slug, build.password_hash)) {
+      return (
+        <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-5 py-16">
+          <Link
+            href="/"
+            className="flex items-center gap-2 self-center text-sm font-medium text-muted hover:text-foreground"
+          >
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-sm">
+              🚀
+            </span>
+            AppDrop
+          </Link>
+          <UnlockForm slug={slug} />
+        </main>
+      );
+    }
   }
 
   const shareUrl = `${baseUrl}/d/${slug}`;
@@ -78,6 +102,13 @@ export default async function SharePage({
         downloadUrl={downloadUrl}
         qrDataUrl={qrDataUrl}
       />
+
+      <Link
+        href="/"
+        className="flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground transition hover:border-accent/60 hover:bg-surface-2"
+      >
+        ＋ Upload build khác
+      </Link>
     </main>
   );
 }

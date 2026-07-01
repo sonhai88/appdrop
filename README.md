@@ -10,7 +10,11 @@ shareable link, install over-the-air on iOS & Android.
 - **Share page** `/d/<slug>` with QR code + OS-aware install button.
 - **iOS**: generates the `itms-services://` manifest.plist for OTA install.
 - **Android**: serves the `.apk` directly with the right content-type.
-- Optional note + link expiry; download counter.
+- Optional note, link expiry, per-link password; download counter.
+- **Dashboard** `/builds`: all uploads grouped by app + version history, search, manual delete.
+- **Login**: one shared team password (`APP_PASSWORD`) gates upload + dashboard; install links stay public.
+- **UDID collector** `/udid`: testers tap once, their iPhone posts its UDID back (Apple OTA enrollment) → listed in the dashboard for ad-hoc registration.
+- **Auto-cleanup**: expired builds (files + rows) are swept on boot + hourly.
 
 ## Stack
 

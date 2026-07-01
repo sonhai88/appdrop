@@ -1,8 +1,17 @@
+import Link from "next/link";
 import UploadForm from "@/components/UploadForm";
 
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-8 px-5 py-12 sm:py-20">
+      <div className="flex justify-end">
+        <Link
+          href="/builds"
+          className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition hover:text-foreground"
+        >
+          Quản lý builds →
+        </Link>
+      </div>
       <header className="flex flex-col gap-3 text-center">
         <div className="mx-auto flex items-center gap-2">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-lg">
