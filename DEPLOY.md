@@ -17,11 +17,56 @@ Caddy (cổng 443, tự lo Let's Encrypt SSL)
 Next.js server (npm start)  ──>  /var/lib/appdrop/data/  (app.db + file .ipa/.apk)
 ```
 
-iOS bắt buộc HTTPS valid → **đó là lý do phải có domain + Caddy**, không chạy được bằng IP trần.
+iOS bắt buộc HTTPS được trust → cần **domain public** (cách A, mục 1–7) HOẶC **self-signed CA cài lên từng iPhone** (cách B, mục LAN ngay dưới). Android thì không cần gì.
 
 ---
 
-## 1. Mua + trỏ domain (anh đang ở bước này)
+## ⭐ Dùng trong mạng nội bộ (LAN, KHÔNG domain)
+
+Kịch bản: máy chạy AppDrop nằm trong mạng công ty, tester cùng wifi/LAN. Không mở ra internet.
+
+### Android — chạy ngay, 0 setup
+Mở `http://<IP-máy-server>:3000` (vd `http://192.168.1.50:3000`) → upload `.apk` → gửi link `/d/<slug>` → tester mở trên Android → *Tải & cài APK*. Xong. Không cần Caddy, không cần cert.
+
+> Nên đặt **IP tĩnh** cho máy server (DHCP đổi IP là link chết). IT công ty set reservation theo MAC là được.
+
+### iOS — cần self-signed CA (cài 1 lần / iPhone)
+
+iOS OTA từ chối http và self-signed chưa trust. Cách làm không cần domain: tạo 1 CA nội bộ, ký cert cho server, cài CA đó lên từng iPhone.
+
+**Bước 1 — tạo cert (chạy trên máy server, cần `openssl`):**
+```bash
+sudo mkdir -p /etc/appdrop/certs
+sudo ./scripts/gen-ios-certs.sh 192.168.1.50 /etc/appdrop/certs   # đổi thành IP tĩnh của anh
+```
+Ra: `server.crt`/`server.key` (cho Caddy) + `appdrop-ca.mobileconfig` (cho iPhone). Cert đã đúng chuẩn iOS (SAN + EKU + hạn <825 ngày).
+
+**Bước 2 — Caddy dùng cert đó** (cài Caddy theo mục 2 bên dưới, rồi):
+```bash
+sudo cp Caddyfile.lan /etc/caddy/Caddyfile
+sudo nano /etc/caddy/Caddyfile        # đổi 192.168.1.50 → IP máy anh (cả 3 chỗ)
+sudo systemctl reload caddy
+```
+
+**Bước 3 — `.env`:**
+```
+PUBLIC_BASE_URL=https://192.168.1.50   # đúng IP đã ký trong cert
+DATA_DIR=/var/lib/appdrop/data
+```
+
+**Bước 4 — mỗi iPhone làm 1 lần:**
+1. Mở `http://192.168.1.50/appdrop-ca.mobileconfig` (http, để tránh cảnh báo cert lúc chưa trust) → *Cho phép tải Cấu hình*.
+2. Cài đặt → **Đã tải hồ sơ** → *Cài đặt*.
+3. Cài đặt → Cài đặt chung → Giới thiệu → **Cài đặt tin cậy chứng chỉ** → bật **Tin cậy hoàn toàn** cho "AppDrop Internal CA". ⚠️ Bước này Apple bắt làm tay, profile không tự bật hộ được.
+4. Xong — giờ mở `https://192.168.1.50/d/<slug>` → *Cài đặt lên iPhone* chạy như Diawi.
+
+> ⚠️ Đây chỉ lo phần **HTTPS transport**. File `.ipa` **vẫn phải ký ad-hoc/enterprise + UDID máy đó** (mục 6). Hai chuyện tách biệt, đừng nhầm.
+
+> Không muốn đụng từng máy? Mua 1 domain rẻ rồi trỏ **A record về private IP** + Caddy DNS-01 challenge → cert valid mà không cần mở port ra ngoài, iPhone khỏi cài CA. Bảo em nếu đổi hướng này.
+
+---
+
+## 1. (Cách A — có domain public) Mua + trỏ domain
 
 iOS OTA **không chạy với IP trần hay self-signed cert**. Cần 1 domain/subdomain thật.
 
@@ -121,11 +166,32 @@ Nếu tester báo "không cài được": 90% là UDID chưa nằm trong profile
 
 ---
 
-## 7. Vận hành
+## 7. Lưu trữ file build
 
-- **Backup**: chỉ cần backup thư mục `DATA_DIR` (`/var/lib/appdrop/data`) — chứa cả DB lẫn file.
+File `.ipa/.apk` + `app.db` đều nằm trong **`DATA_DIR`** (mặc định `/var/lib/appdrop/data`).
+
+### Đổi chỗ lưu → NAS / ổ mạng công ty
+Chỉ cần trỏ `DATA_DIR` vào mount point của NAS, không đụng code:
+
+```bash
+# Ví dụ mount SMB (NAS công ty) — /etc/fstab để tự mount lại khi reboot:
+//nas.company.local/appdrop  /mnt/appdrop  cifs  credentials=/etc/appdrop/smb.cred,uid=appdrop,gid=appdrop,file_mode=0660,dir_mode=0770  0  0
+
+sudo mount -a
+# rồi trong .env:
+DATA_DIR=/mnt/appdrop/data
+sudo systemctl restart appdrop
+```
+NFS thì tương tự (`type nfs`). File từ đó nằm trên NAS chung, không ăn disk máy server.
+
+### Tự dọn build hết hạn (đã có sẵn)
+App **tự xoá** cả DB row lẫn file khi link quá `expires_at` — chạy lúc khởi động + mỗi giờ (`src/instrumentation.ts` → `sweepExpired()`). Không cần cron ngoài. Build đặt "Không hết hạn" thì giữ mãi.
+
+## 8. Vận hành
+
+- **Backup**: backup thư mục `DATA_DIR` — chứa cả DB lẫn file (nếu đã trỏ NAS thì NAS lo backup).
 - **Update app**: `cd /opt/appdrop && git pull && npm ci && npm run build && sudo systemctl restart appdrop`
-- **Dọn build hết hạn**: link hết hạn tự ẩn (DB check `expires_at`), nhưng file vẫn nằm trên disk. Có thể thêm cron xoá folder cũ trong `DATA_DIR/uploads/` sau này nếu cần.
+- **Xem log dọn dẹp**: `journalctl -u appdrop | grep cleanup`
 
 ---
 

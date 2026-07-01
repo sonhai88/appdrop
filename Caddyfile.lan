@@ -1,0 +1,34 @@
+# Caddy config for LAN use with a self-signed cert (no public domain).
+# Generate the certs first:  ./scripts/gen-ios-certs.sh 192.168.1.50 /etc/appdrop/certs
+# Replace 192.168.1.50 everywhere with your server's LAN IP (or hostname).
+#
+# Two listeners on purpose:
+#   :80  (http)  — hands out the CA profile BEFORE https is trusted (avoids the
+#                  chicken-and-egg cert warning). Only the profile path is exposed.
+#   :443 (https) — the actual app, using the self-signed server cert.
+
+{
+	# No public ACME — we bring our own cert.
+	auto_https off
+}
+
+http://192.168.1.50 {
+	# Serve ONLY the CA profile from the certs dir (never the .key files).
+	@ca path /appdrop-ca.mobileconfig
+	handle @ca {
+		root * /etc/appdrop/certs
+		file_server
+	}
+	handle {
+		respond "AppDrop: cài CA profile tại /appdrop-ca.mobileconfig rồi mở https://192.168.1.50" 200
+	}
+}
+
+https://192.168.1.50 {
+	tls /etc/appdrop/certs/server.crt /etc/appdrop/certs/server.key
+	reverse_proxy localhost:3000
+	request_body {
+		max_size 0
+	}
+	encode gzip
+}
