@@ -1,22 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function UnlockForm({ slug }: { slug: string }) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const pw = inputRef.current?.value || password;
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/unlock/${slug}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password: pw }),
     });
     if (res.ok) {
       router.refresh(); // re-render the server page, now unlocked
@@ -40,6 +42,7 @@ export default function UnlockForm({ slug }: { slug: string }) {
         <p className="text-sm text-muted">Nhập mật khẩu để xem và cài đặt</p>
       </div>
       <input
+        ref={inputRef}
         type="password"
         autoFocus
         value={password}
@@ -50,7 +53,7 @@ export default function UnlockForm({ slug }: { slug: string }) {
       {error && <p className="text-xs text-red-400">{error}</p>}
       <button
         type="submit"
-        disabled={busy || !password}
+        disabled={busy}
         className="h-11 rounded-xl bg-gradient-to-r from-accent to-accent-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
       >
         {busy ? "Đang mở…" : "Mở khoá"}

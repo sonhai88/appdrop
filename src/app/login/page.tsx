@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -8,18 +8,22 @@ function LoginForm() {
   const search = useSearchParams();
   const next = search.get("next") || "/";
 
+  const inputRef = useRef<HTMLInputElement>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Read straight from the DOM too — survives browser autofill that doesn't
+    // fire onChange (state would otherwise be empty).
+    const pw = inputRef.current?.value || password;
     setBusy(true);
     setError(null);
     const res = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password: pw }),
     });
     if (res.ok) {
       router.replace(next);
@@ -44,6 +48,7 @@ function LoginForm() {
       </div>
 
       <input
+        ref={inputRef}
         type="password"
         autoFocus
         value={password}
@@ -56,7 +61,7 @@ function LoginForm() {
 
       <button
         type="submit"
-        disabled={busy || !password}
+        disabled={busy}
         className="h-11 rounded-xl bg-gradient-to-r from-accent to-accent-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
       >
         {busy ? "Đang vào…" : "Đăng nhập"}
