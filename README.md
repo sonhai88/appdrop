@@ -39,9 +39,10 @@ see [DEPLOY.md](./DEPLOY.md).
 
 ## Deploy
 
-- **Quick setup for whoever sets up the VPS (LAN, copy-paste commands): [SETUP.md](./SETUP.md)**
+- **Public in ~10 min (anyone can install via the link): [RAILWAY.md](./RAILWAY.md)** — container host, public HTTPS, iOS OTA works out of the box.
+- LAN / VPS quick setup (copy-paste): [SETUP.md](./SETUP.md)
 - Full guide (domain vs LAN, Caddy, systemd, storage, iOS signing): [DEPLOY.md](./DEPLOY.md)
-- **Cloudflare R2 storage (egress-free; also makes iOS OTA work without a domain): [R2.md](./R2.md)**
+- Cloudflare R2 storage (egress-free; also makes iOS OTA work without a domain): [R2.md](./R2.md)
 
 ## Storage
 
