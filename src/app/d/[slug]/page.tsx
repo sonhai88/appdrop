@@ -2,11 +2,13 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { baseUrlFromHeaders } from "@/lib/config";
+import { SESSION_COOKIE, authEnabled, sessionToken } from "@/lib/auth";
 import { getActiveBuild } from "@/lib/db";
 import { manifestUrlFor } from "@/lib/blob";
 import { unlockToken } from "@/lib/password";
 import InstallPanel from "@/components/InstallPanel";
 import UnlockForm from "@/components/UnlockForm";
+import Logo from "@/components/Logo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +22,28 @@ export default async function SharePage({
   const build = getActiveBuild(slug);
   const baseUrl = baseUrlFromHeaders(await headers());
 
+  // Only admins (logged in, or auth disabled) see upload/manage affordances —
+  // a public visitor opening a share link shouldn't see a way "back to upload".
+  const cookieStore = await cookies();
+  const canUpload =
+    !authEnabled() ||
+    cookieStore.get(SESSION_COOKIE)?.value === (await sessionToken());
+
+  // Brand header: clickable back to home only when the viewer can upload.
+  const brand = (
+    <div className="flex items-center gap-2 self-center text-sm font-medium text-muted">
+      <Logo className="h-7 w-7" icon="h-4 w-4" />
+      AppDrop
+    </div>
+  );
+  const header = canUpload ? (
+    <Link href="/" className="self-center transition hover:opacity-80">
+      {brand}
+    </Link>
+  ) : (
+    brand
+  );
+
   if (!build) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-5 py-20 text-center">
@@ -28,12 +52,14 @@ export default async function SharePage({
         <p className="text-sm text-muted">
           Build này đã bị xoá hoặc link đã quá hạn cài đặt.
         </p>
-        <Link
-          href="/"
-          className="mt-2 rounded-xl bg-gradient-to-r from-accent to-accent-2 px-5 py-2.5 text-sm font-semibold text-white"
-        >
-          Upload build mới
-        </Link>
+        {canUpload && (
+          <Link
+            href="/"
+            className="mt-2 rounded-xl bg-gradient-to-r from-accent to-accent-2 px-5 py-2.5 text-sm font-semibold text-white transition active:translate-y-px"
+          >
+            Upload build mới
+          </Link>
+        )}
       </main>
     );
   }
@@ -45,15 +71,7 @@ export default async function SharePage({
     if (cookie !== unlockToken(slug, build.password_hash)) {
       return (
         <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-5 py-16">
-          <Link
-            href="/"
-            className="flex items-center gap-2 self-center text-sm font-medium text-muted hover:text-foreground"
-          >
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-sm">
-              🚀
-            </span>
-            AppDrop
-          </Link>
+          {header}
           <UnlockForm slug={slug} />
         </main>
       );
@@ -74,15 +92,7 @@ export default async function SharePage({
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-5 py-12 sm:py-16">
-      <Link
-        href="/"
-        className="flex items-center gap-2 self-center text-sm font-medium text-muted hover:text-foreground"
-      >
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-sm">
-          🚀
-        </span>
-        AppDrop
-      </Link>
+      {header}
 
       <InstallPanel
         slug={slug}
@@ -104,12 +114,14 @@ export default async function SharePage({
         qrDataUrl={qrDataUrl}
       />
 
-      <Link
-        href="/"
-        className="flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground transition hover:border-accent/60 hover:bg-surface-2"
-      >
-        ＋ Upload build khác
-      </Link>
+      {canUpload && (
+        <Link
+          href="/"
+          className="flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground transition hover:border-accent/60 hover:bg-surface-2 active:translate-y-px"
+        >
+          ＋ Upload build khác
+        </Link>
+      )}
     </main>
   );
 }

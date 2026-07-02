@@ -119,14 +119,14 @@ export default function InstallPanel(props: Props) {
         {isIos ? (
           <a
             href={props.itmsUrl}
-            className="grid place-items-center rounded-xl bg-gradient-to-r from-accent to-accent-2 px-5 py-3.5 text-base font-semibold text-white transition hover:opacity-90"
+            className="grid place-items-center rounded-xl bg-gradient-to-r from-accent to-accent-2 px-5 py-3.5 text-base font-semibold text-white transition hover:opacity-90 active:translate-y-px"
           >
             Cài đặt lên iPhone / iPad
           </a>
         ) : (
           <a
             href={props.downloadUrl}
-            className="grid place-items-center rounded-xl bg-gradient-to-r from-accent to-accent-2 px-5 py-3.5 text-base font-semibold text-white transition hover:opacity-90"
+            className="grid place-items-center rounded-xl bg-gradient-to-r from-accent to-accent-2 px-5 py-3.5 text-base font-semibold text-white transition hover:opacity-90 active:translate-y-px"
           >
             Tải &amp; cài APK
           </a>
@@ -168,7 +168,10 @@ export default function InstallPanel(props: Props) {
         {meta.map(([label, value]) => (
           <div key={label} className="flex flex-col gap-1 bg-surface p-4">
             <span className="text-xs text-muted">{label}</span>
-            <span className="truncate text-sm font-medium text-foreground" title={value}>
+            <span
+              className="nums truncate text-sm font-medium text-foreground"
+              title={value}
+            >
               {value}
             </span>
           </div>

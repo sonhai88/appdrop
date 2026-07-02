@@ -4,6 +4,7 @@ import { authEnabled } from "@/lib/auth";
 import { MAX_APPS } from "@/lib/config";
 import { formatDate } from "@/lib/format";
 import LogoutButton from "@/components/LogoutButton";
+import Logo from "@/components/Logo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,12 +28,10 @@ export default async function BuildsDashboard({
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-5 py-10">
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-lg">
-            🚀
-          </span>
+          <Logo />
           <div className="flex flex-col">
             <span className="text-base font-bold leading-tight">AppDrop</span>
-            <span className="text-xs text-muted">
+            <span className="nums text-xs text-muted">
               {allApps.length}/{MAX_APPS} app
             </span>
           </div>

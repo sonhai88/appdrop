@@ -1,5 +1,6 @@
 import Link from "next/link";
 import UploadForm from "@/components/UploadForm";
+import Logo from "@/components/Logo";
 
 export default function Home() {
   return (
@@ -14,9 +15,7 @@ export default function Home() {
       </div>
       <header className="flex flex-col gap-3 text-center">
         <div className="mx-auto flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-lg">
-            🚀
-          </span>
+          <Logo />
           <span className="text-lg font-semibold tracking-tight">AppDrop</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

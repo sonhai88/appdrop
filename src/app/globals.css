@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0c10;
-  --surface: #14161d;
-  --surface-2: #1b1e27;
-  --border: #272b36;
-  --foreground: #e7e9ee;
-  --muted: #9aa0ad;
-  --accent: #6366f1;
-  --accent-2: #22d3ee;
+  --background: #08090a;
+  --surface: #101113;
+  --surface-2: #191a1d;
+  --border: #24262b;
+  --foreground: #f7f8f8;
+  --muted: #8a8f98;
+  --accent: #5e6ad2;
+  --accent-2: #7170ff;
 }
 
 @theme inline {
@@ -25,9 +25,18 @@
 }
 
 body {
+  /* Near-black canvas with a faint indigo lift at the top — no loud glow. */
   background:
-    radial-gradient(1100px 520px at 50% -10%, rgba(99, 102, 241, 0.18), transparent 60%),
+    radial-gradient(900px 420px at 50% -25%, rgba(94, 106, 210, 0.08), transparent 70%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular figures for anything numeric (sizes, counts, versions). */
+.nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
