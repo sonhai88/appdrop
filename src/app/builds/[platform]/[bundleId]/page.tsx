@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { listBuildsForApp, type Platform } from "@/lib/db";
+import { isAdmin } from "@/lib/authServer";
 import { formatBytes, formatDate } from "@/lib/format";
 import DeleteBuildButton from "@/components/DeleteBuildButton";
 
@@ -12,6 +13,7 @@ export default async function AppHistory({
 }: {
   params: Promise<{ platform: string; bundleId: string }>;
 }) {
+  if (!(await isAdmin())) redirect("/login");
   const { platform, bundleId: rawBundleId } = await params;
   if (platform !== "ios" && platform !== "android") notFound();
   const bundleId = decodeURIComponent(rawBundleId);

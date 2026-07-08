@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { listApps } from "@/lib/db";
 import { authEnabled } from "@/lib/auth";
+import { isAdmin } from "@/lib/authServer";
 import { MAX_APPS } from "@/lib/config";
 import { formatDate } from "@/lib/format";
 import LogoutButton from "@/components/LogoutButton";
@@ -14,6 +16,7 @@ export default async function BuildsDashboard({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  if (!(await isAdmin())) redirect("/login");
   const { q } = await searchParams;
   const query = (q ?? "").trim().toLowerCase();
   const allApps = listApps();

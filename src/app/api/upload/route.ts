@@ -1,7 +1,6 @@
 import { createReadStream } from "node:fs";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE, authEnabled, sessionToken } from "@/lib/auth";
+import { isAdmin } from "@/lib/authServer";
 import { DEFAULT_EXPIRY_DAYS, MAX_UPLOAD_BYTES } from "@/lib/config";
 import { insertBuild, type BuildRow } from "@/lib/db";
 import { parseBuild, platformFromFilename } from "@/lib/parse";
@@ -39,13 +38,10 @@ function computeExpiry(expiryParam: string | null): number | null {
 }
 
 export async function POST(req: Request) {
-  // Auth is enforced here (not in the proxy) because the proxy is excluded from
-  // this route to avoid its 10MB request-body cap truncating large builds.
-  if (authEnabled()) {
-    const cookie = (await cookies()).get(SESSION_COOKIE)?.value;
-    if (cookie !== (await sessionToken())) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  // Auth enforced here (proxy is excluded from this route to avoid its 10MB
+  // request-body cap truncating large builds).
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);

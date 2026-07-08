@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { listUdids } from "@/lib/db";
+import { isAdmin } from "@/lib/authServer";
 import { formatDate } from "@/lib/format";
 import CopyField from "@/components/CopyField";
 
@@ -7,6 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function UdidAdmin() {
+  if (!(await isAdmin())) redirect("/login");
   const udids = listUdids();
 
   return (

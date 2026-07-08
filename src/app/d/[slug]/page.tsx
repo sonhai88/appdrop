@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { baseUrlFromHeaders } from "@/lib/config";
-import { SESSION_COOKIE, authEnabled, sessionToken } from "@/lib/auth";
+import { isAdmin } from "@/lib/authServer";
 import { getActiveBuild } from "@/lib/db";
 import { manifestUrlFor } from "@/lib/blob";
 import { unlockToken } from "@/lib/password";
@@ -24,10 +24,7 @@ export default async function SharePage({
 
   // Only admins (logged in, or auth disabled) see upload/manage affordances —
   // a public visitor opening a share link shouldn't see a way "back to upload".
-  const cookieStore = await cookies();
-  const canUpload =
-    !authEnabled() ||
-    cookieStore.get(SESSION_COOKIE)?.value === (await sessionToken());
+  const canUpload = await isAdmin();
 
   // Brand header: clickable back to home only when the viewer can upload.
   const brand = (
